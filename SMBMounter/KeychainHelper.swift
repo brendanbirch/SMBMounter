@@ -16,7 +16,8 @@ class KeychainHelper {
         ]
         
         let attributes: [String: Any] = [
-            kSecValueData as String: data
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
         
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -24,6 +25,7 @@ class KeychainHelper {
         if status == errSecItemNotFound {
             var newItem = query
             newItem[kSecValueData as String] = data
+            newItem[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
             SecItemAdd(newItem as CFDictionary, nil)
         }
     }
@@ -34,7 +36,8 @@ class KeychainHelper {
             kSecAttrService as String: service,
             kSecAttrAccount as String: shareID.uuidString,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseDataProtectionKeychain as String: true
         ]
         
         var result: AnyObject?
