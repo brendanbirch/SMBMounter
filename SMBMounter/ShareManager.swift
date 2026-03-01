@@ -15,13 +15,11 @@ class ShareManager: ObservableObject {
     private let mountQueue = DispatchQueue(label: "com.smbmounter.mount", qos: .background)
     private let monitorQueue = DispatchQueue(label: "com.smbmounter.monitor", qos: .background)
     
-    private var monitorTimer: Timer?
     private var recoveryTimer: Timer?
     private var networkMonitor: NWPathMonitor?
     private var isNetworkAvailable: Bool = false
     private var networkRecoveryRetries: Int = 0
     private let maxRecoveryRetries = 8
-    private let reconnectInterval: TimeInterval = 15
     
     private init() {
         loadShares()
@@ -59,9 +57,9 @@ class ShareManager: ObservableObject {
                 let wasAvailable = self.isNetworkAvailable
                 self.isNetworkAvailable = available
                 if available && !wasAvailable {
-                    self.startRecoveryRetries()
+                    self.startReconnectTimer()
                 } else if !available {
-                    self.stopRecoveryRetries()
+                    self.stopReconnectTimer()
                     self.setAllDisconnectedSilently()
                 }
             }
@@ -69,9 +67,12 @@ class ShareManager: ObservableObject {
         nm.start(queue: monitorQueue)
         networkMonitor = nm
         
-        monitorTimer = Timer.scheduledTimer(withTimeInterval: reconnectInterval, repeats: true) { [weak self] _ in
-            self?.checkAndReconnect()
-        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(volumeDidUnmount(_:)),
+            name: NSWorkspace.didUnmountNotification,
+            object: nil
+        )
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.isNetworkAvailable = true
@@ -80,30 +81,51 @@ class ShareManager: ObservableObject {
     }
     
     func stopMonitoring() {
-        monitorTimer?.invalidate()
-        recoveryTimer?.invalidate()
+        stopReconnectTimer()
         networkMonitor?.cancel()
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
     
-    // MARK: - Recovery
-    
-    private func startRecoveryRetries() {
-        stopRecoveryRetries()
-        networkRecoveryRetries = 0
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.mountAllAutoShares()
-        }
-        recoveryTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] timer in
-            guard let self = self else { timer.invalidate(); return }
-            self.networkRecoveryRetries += 1
-            self.mountAllAutoShares()
-            if self.networkRecoveryRetries >= self.maxRecoveryRetries {
-                self.stopRecoveryRetries()
+    @objc private func volumeDidUnmount(_ notification: Notification) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.updateMountStatuses()
+            let hasDisconnected = self.shares.contains {
+                $0.autoMount && !self.manuallyDisconnected.contains($0.id) && !self.isMounted($0)
+            }
+            if hasDisconnected {
+                self.startReconnectTimer()
             }
         }
     }
     
-    private func stopRecoveryRetries() {
+    // MARK: - Reconnect Timer (only runs when needed)
+    
+    private func startReconnectTimer() {
+        guard recoveryTimer == nil else { return }
+        guard isNetworkAvailable else { return }
+        networkRecoveryRetries = 0
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            guard self.isNetworkAvailable else { return }
+            self.mountAllAutoShares()
+        }
+        
+        recoveryTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            guard self.isNetworkAvailable else { return }
+            self.mountAllAutoShares()
+            
+            let allMounted = self.shares
+                .filter { $0.autoMount && !self.manuallyDisconnected.contains($0.id) }
+                .allSatisfy { self.isMounted($0) }
+            
+            if allMounted {
+                self.stopReconnectTimer()
+            }
+        }
+    }
+    
+    private func stopReconnectTimer() {
         recoveryTimer?.invalidate()
         recoveryTimer = nil
         networkRecoveryRetries = 0
@@ -118,19 +140,22 @@ class ShareManager: ObservableObject {
         updateAppIcon()
     }
     
-    private func checkAndReconnect() {
-        guard isNetworkAvailable else { return }
-        mountAllAutoShares()
-        updateMountStatuses()
-    }
-    
     func mountAllAutoShares() {
+        guard isNetworkAvailable else { return }
+        let needsReconnect = shares.contains {
+            $0.autoMount && !manuallyDisconnected.contains($0.id) && !isMounted($0) && $0.status != .connecting
+        }
+        
         for share in shares where share.autoMount && !manuallyDisconnected.contains(share.id) {
             if !isMounted(share) && share.status != .connecting {
                 mount(share)
             }
         }
         updateMountStatuses()
+        
+        if !needsReconnect {
+            stopReconnectTimer()
+        }
     }
     
     // MARK: - Bonjour check
